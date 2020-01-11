@@ -46,18 +46,28 @@ class diodown extends State<diodownparent>{
     }
   }
 
-  void _showDialog() {
+  void _showDialog(String content,bool error) {
     // flutter defined function
     showDialog(
       context: context,
       builder: (BuildContext context) {
         // return object of type Dialog
         return AlertDialog(
-          content: new Text("Extracting Youtube ID..."),
+          title: error ? Text('Error'): null,
+          content: new Text(content),
+          actions: error? <Widget>[
+            FlatButton(
+              child: Text('OK'),
+              onPressed: (){
+                cancel(cancelToken);
+              },
+            )
+          ]:null,
         );
       },
     );
   }
+
 
   void _showquitDialog() {
     // flutter defined function
@@ -93,22 +103,25 @@ class diodown extends State<diodownparent>{
 
     _timer();
 
-    _showDialog();
+    _showDialog("Extracting Youtube ID...", false);
 
-    var audioInfo = await extractor.getMediaStreamsAsync(id).whenComplete((){
+    var audioInfo;
+
+    audioInfo = await extractor.getMediaStreamsAsync(id).whenComplete((){
       Navigator.pop(context);
     });
 
-    var dwrul = audioInfo.audio.first.url;
-
     try {
+
+      var dwrul = audioInfo.audio.first.url;
+
       await dio.download(dwrul, dir + '/' + globals.name +'.mp3',
           onReceiveProgress: showDownloadProgress,
           cancelToken: cancelToken,
           deleteOnError: true
       );
     } catch (e) {
-      print(e);
+      _showDialog(e.toString(), true);
     }
 
   }
@@ -116,7 +129,10 @@ class diodown extends State<diodownparent>{
   void cancel(CancelToken token) async{
     double_percent = 0;
     str_percent = '0%';
-    await token.cancel();
+
+    if(!token.isCancelled)
+      await token.cancel();
+
     Navigator.pop(context);
   }
 
